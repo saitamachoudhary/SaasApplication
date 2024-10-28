@@ -9,6 +9,8 @@ import App from './App'
 import IndexPage from './Routes/home';
 import SignInPage from './Routes/sign-in'
 import SignUpPage from './Routes/sign-up'
+import Socialshare from './Routes/socialshare'
+
 const router = createBrowserRouter([
   {
     element: <App />,
@@ -16,6 +18,7 @@ const router = createBrowserRouter([
       { path: '/', element: <IndexPage /> },
       { path: '/sign-in/*', element: <SignInPage /> },
       { path: '/sign-up/*', element: <SignUpPage /> },
+      {path: '/social-share', element: <Socialshare/>},
       // {
       //   element: <DashboardLayout />,
       //   path: 'dashboard',

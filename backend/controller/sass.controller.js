@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
-import { v2 as cloudinary } from 'cloudinary';
-import { auth } from "@clerk/clerk-sdk-node";
+const cloudinary = require('cloudinary').v2;
+const { auth } = require("@clerk/clerk-sdk-node");
+// const { requireAuth } =require('@clerk/express');
 const prisma = new PrismaClient();
 
 
@@ -64,7 +65,7 @@ const uplodad_image = async (req, res) => {
 
 const video_upload = async () => {
     try {
-        const { userId } = auth();
+        const { userId } = requireAuth();
 
         if (!userId) {
             res.status(400).json({ error: "Unauthorized" });
