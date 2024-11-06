@@ -1,12 +1,6 @@
-import React,{useState,useEffect,useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Cloudinary } from "@cloudinary/url-gen";
-import { AdvancedImage } from '@cloudinary/react';
-import { fill } from "@cloudinary/url-gen/actions/resize";
-
-import { thumbnail } from "@cloudinary/url-gen/actions/resize";
-import { byRadius } from "@cloudinary/url-gen/actions/roundCorners";
-import { focusOn } from "@cloudinary/url-gen/qualifiers/gravity";
-import { FocusOn } from "@cloudinary/url-gen/qualifiers/focusOn";
+import { Image, Video, Transformation, CloudinaryContext } from 'cloudinary-react';
 
 
 const socialFormats = {
@@ -20,43 +14,142 @@ const socialFormats = {
 type SocialFormat = keyof typeof socialFormats;
 
 const Socialshare = () => {
-  const [uploadedImage,setUploadedImage]=useState<string|null>(null);
-  const  [selectedFormat,setSelectedFormat]=useState<SocialFormat>("Instagram Square (1:1)");
-  const [isUploading,setIsUploading]=useState(false);
-  const [isTransforming,setIsTransforming]=useState(false);
-  const imageRef=useRef<HTMLImageElement>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<SocialFormat>("Instagram Square (1:1)");
+  const [isUploading, setIsUploading] = useState(false);
+  const [isTransforming, setIsTransforming] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
 
-  useEffect(()=>{
-    if(uploadedImage){
+  useEffect(() => {
+    if (uploadedImage) {
       setIsTransforming(true)
     }
-  },[selectedFormat,uploadedImage])
+  }, [selectedFormat, uploadedImage])
 
-  const handleFileUploade=async()=>{
-     const file=event?.target.files?.[0];
-     if(!file) return;
-     setIsUploading(true);
-     const formData=new FormData();
-     formData.append("file",file);
-     try {
-      
-     } catch (error) {
-      
-     }
+  const handleFileUploade = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event?.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const response = await fetch('/api/uplodad_image', {
+        method: "POST",
+        body: formData
+      })
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+      const data = await response.json();
+      setUploadedImage(data.publicId);
+    } catch (error) {
+      alert("Uploade image failed");
+      console.log(error);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+  const handleDownload = () => {
+    if (!imageRef.current) return;
+    fetch(imageRef.current.src)
+      .then(response => response.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${selectedFormat.replace(/\s/g, '_').toLowerCase()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      })
   }
   const cld = new Cloudinary({
     cloud: {
       cloudName: 'demo'
     }
   });
-  const myImage = cld.image('samples/upscale-face-1');
-  // myImage.resize(fill().width(250).height(250));
-  myImage
-    .resize(thumbnail().width(250).height(250).gravity(focusOn(FocusOn.face())))
-    .roundCorners(byRadius(20));
-  return ( 
-    <div>
-      <AdvancedImage cldImg={myImage} />
+
+  return (
+    <div className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        Social Media Image Creator
+      </h1>
+
+      <div className="card">
+        <div className="card-body">
+          <h2 className="card-title mb-4">Upload an Image</h2>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Choose an image file</span>
+            </label>
+            <input
+              type="file"
+              onChange={handleFileUploade}
+              className="file-input file-input-bordered file-input-primary w-full"
+            />
+          </div>
+
+          {isUploading && (
+            <div className="mt-4">
+              <progress className="progress progress-primary w-full"></progress>
+            </div>
+          )}
+
+          {uploadedImage && (
+            <div className="mt-6">
+              <h2 className="card-title mb-4">Select Social Media Format</h2>
+              <div className="form-control">
+                <select
+                  className="select select-bordered w-full"
+                  value={selectedFormat}
+                  onChange={(e) =>
+                    setSelectedFormat(e.target.value as SocialFormat)
+                  }
+                >
+                  {Object.keys(socialFormats).map((format) => (
+                    <option key={format} value={format}>
+                      {format}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-6 relative">
+                <h3 className="text-lg font-semibold mb-2">Preview:</h3>
+                <div className="flex justify-center">
+                  {isTransforming && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-base-100 bg-opacity-50 z-10">
+                      <span className="loading loading-spinner loading-lg"></span>
+                    </div>
+                  )}
+                  {/* <CldImage
+                    width={socialFormats[selectedFormat].width}
+                    height={socialFormats[selectedFormat].height}
+                    src={uploadedImage}
+                    sizes="100vw"
+                    alt="transformed image"
+                    crop="fill"
+                    aspectRatio={socialFormats[selectedFormat].aspectRatio}
+                    gravity='auto'
+                    ref={imageRef}
+                    onLoad={() => setIsTransforming(false)}
+                  /> */}
+
+                  <Image publicId={uploadedImage} width={socialFormats[selectedFormat].width} height={socialFormats[selectedFormat].height} />
+
+                </div>
+              </div>
+
+              <div className="card-actions justify-end mt-6">
+                <button className="btn btn-primary" onClick={handleDownload}>
+                  Download for {selectedFormat}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
