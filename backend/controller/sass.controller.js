@@ -1,14 +1,11 @@
 const { PrismaClient } = require("@prisma/client");
 const cloudinary = require('cloudinary').v2;
-const { auth } = require("@clerk/clerk-sdk-node");
-// const { requireAuth } =require('@clerk/express');
 const prisma = new PrismaClient();
-
 
 cloudinary.config({
     cloud_name: process.env.PUBLIC_CLOUDINARY_CLOUD_NAME,
     api_key: process.env.PUBLIC_CLOUDINARY_API_KEY,
-    api_secret: process.env.PUBLIC_CLOUDINARY_API_SECRET // Click 'View API Keys' above to copy your API secret
+    api_secret: process.env.PUBLIC_CLOUDINARY_API_SECRET
 });
 
 
@@ -25,23 +22,21 @@ const video = async (req, res) => {
     }
 }
 
-const uplodad_image = async (req, res) => {
-    const { userId } = auth();
+const upload_image = async (req, res) => {
+    const { userId } = req.auth;
 
     if (!userId) {
-        res.status(400).json({ error: "Unauthorized" });
+        return res.status(400).json({ error: "Unauthorized" });
     }
 
     try {
-        const formData = await req.formData();
-        const file = formData.get("file");
+        const file = await req.file;
 
         if (!file) {
             res.status(400).json({ error: "File not found" })
         }
 
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        const buffer = file.buffer;
 
         const result = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
@@ -54,10 +49,10 @@ const uplodad_image = async (req, res) => {
             uploadStream.end(buffer);
         })
 
-        res.status(200).json({ publicId: result.public_id });
+        return res.status(200).json({ publicId: result.public_id });
     } catch (error) {
-        console.log("upload iamge failed", error)
-        res.status(500).json({ error: "upload iamge failed" });
+        console.log("upload image failed", error)
+        return res.status(500).json({ error: "upload image failed" });
     } finally {
         await prisma.$disconnect();
     }
@@ -127,5 +122,5 @@ const video_upload = async () => {
 }
 
 module.exports = {
-    video, uplodad_image, video_upload
+    video, upload_image, video_upload
 }

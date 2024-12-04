@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Cloudinary } from "@cloudinary/url-gen";
-import { Image, Video, Transformation, CloudinaryContext } from 'cloudinary-react';
+import {AdvancedImage} from '@cloudinary/react';
+import {thumbnail} from "@cloudinary/url-gen/actions/resize";
+import {byRadius} from "@cloudinary/url-gen/actions/roundCorners";
+import {focusOn} from "@cloudinary/url-gen/qualifiers/gravity";
+import {FocusOn} from "@cloudinary/url-gen/qualifiers/focusOn";
 
 
 const socialFormats = {
@@ -18,7 +22,7 @@ const Socialshare = () => {
   const [selectedFormat, setSelectedFormat] = useState<SocialFormat>("Instagram Square (1:1)");
   const [isUploading, setIsUploading] = useState(false);
   const [isTransforming, setIsTransforming] = useState(false);
-  const imageRef = useRef<HTMLImageElement>(null);
+  const imageRef = useRef<AdvancedImage>(null);
 
   useEffect(() => {
     if (uploadedImage) {
@@ -33,9 +37,9 @@ const Socialshare = () => {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const response = await fetch('/api/uplodad_image', {
+      const response = await fetch('/api/upload_image', {
         method: "POST",
-        body: formData
+        body: formData, 
       })
       if (!response.ok) {
         throw new Error(response.statusText);
@@ -43,7 +47,7 @@ const Socialshare = () => {
       const data = await response.json();
       setUploadedImage(data.publicId);
     } catch (error) {
-      alert("Uploade image failed");
+      alert("Upload image failed");
       console.log(error);
     } finally {
       setIsUploading(false);
@@ -51,7 +55,7 @@ const Socialshare = () => {
   }
   const handleDownload = () => {
     if (!imageRef.current) return;
-    fetch(imageRef.current.src)
+    fetch(imageRef.current.currentSrc)
       .then(response => response.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);
@@ -66,9 +70,13 @@ const Socialshare = () => {
   }
   const cld = new Cloudinary({
     cloud: {
-      cloudName: 'demo'
+      cloudName: 'dpeb83m40'
     }
   });
+
+  // const myImage = uploadedImage ? cld.image(uploadedImage) : null;
+  const myImage = cld.image(uploadedImage ?? undefined);
+  myImage.resize(thumbnail().width(socialFormats[selectedFormat].width).height(socialFormats[selectedFormat].height).aspectRatio(socialFormats[selectedFormat].aspectRatio));
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
@@ -136,8 +144,8 @@ const Socialshare = () => {
                     onLoad={() => setIsTransforming(false)}
                   /> */}
 
-                  <Image publicId={uploadedImage} width={socialFormats[selectedFormat].width} height={socialFormats[selectedFormat].height} />
-
+                  {/* <Image publicId={uploadedImage} width={socialFormats[selectedFormat].width} height={socialFormats[selectedFormat].height} /> */}
+                  <AdvancedImage cldImg={myImage} ref={imageRef} onLoad={() => setIsTransforming(false)}/>
                 </div>
               </div>
 
